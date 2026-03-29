@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
+// --- 型定義 ---
 interface BoothItem {
   id: number;
   name: string;
@@ -17,7 +18,7 @@ interface BoothItem {
 
 interface Pin {
   itemId: number;
-  x: number; // スクショ上の位置（割合 0~1）
+  x: number; 
   y: number;
 }
 
@@ -32,9 +33,14 @@ function App() {
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [pins, setPins] = useState<Pin[]>([]);
+  
+  // ドラッグ管理用
+  const [draggingPinId, setDraggingPinId] = useState<number | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const screenshotRef = useRef<HTMLDivElement>(null);
 
+  // --- アイテム操作 ---
   async function fetchItem() {
     if (!url.trim()) return;
     setLoading(true);
@@ -42,15 +48,10 @@ function App() {
     try {
       const item = await invoke<BoothItem>("fetch_booth_item", { url });
       if (item.thumbnail_url) {
-        const localUrl = await invoke<string>("fetch_image", {
-          url: item.thumbnail_url,
-        });
+        const localUrl = await invoke<string>("fetch_image", { url: item.thumbnail_url });
         item.thumbnail_url = localUrl;
       }
-      setItems((prev) => {
-        if (prev.find((i) => i.id === item.id)) return prev;
-        return [...prev, item];
-      });
+      setItems((prev) => prev.find((i) => i.id === item.id) ? prev : [...prev, item]);
       setUrl("");
     } catch (e) {
       setError(String(e));
@@ -59,22 +60,42 @@ function App() {
     }
   }
 
-  function onScreenshotSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setScreenshot(ev.target?.result as string);
-      setPins([]);
-    };
-    reader.readAsDataURL(file);
+  function removeItem(itemId: number) {
+    setItems((prev) => prev.filter((i) => i.id !== itemId));
+    setPins((prev) => prev.filter((p) => p.itemId !== itemId));
+    if (selectedItemId === itemId) setSelectedItemId(null);
   }
 
+  // --- ドラッグ&ドロップ ロジック ---
+  const handlePinMouseDown = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation();
+    setDraggingPinId(itemId);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (draggingPinId === null || !screenshotRef.current) return;
+
+    const rect = screenshotRef.current.getBoundingClientRect();
+    // 0~1の範囲にクランプ（制限）
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+    setPins((prev) =>
+      prev.map((p) => (p.itemId === draggingPinId ? { ...p, x, y } : p))
+    );
+  };
+
+  const handleMouseUp = () => {
+    setDraggingPinId(null);
+  };
+
+  // スクショをクリックして新規配置
   function onScreenshotClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (selectedItemId === null) return;
+    if (selectedItemId === null || draggingPinId !== null) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
+    
     setPins((prev) => {
       const filtered = prev.filter((p) => p.itemId !== selectedItemId);
       return [...filtered, { itemId: selectedItemId, x, y }];
@@ -82,14 +103,16 @@ function App() {
     setSelectedItemId(null);
   }
 
+  // --- ヘルパー ---
   function getColor(itemId: number) {
     const idx = items.findIndex((i) => i.id === itemId);
-    return COLORS[idx % COLORS.length];
+    return COLORS[idx % COLORS.length] || COLORS[0];
   }
 
   function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = "Anonymous";
       img.onload = () => resolve(img);
       img.onerror = reject;
       img.src = src;
@@ -110,10 +133,10 @@ function App() {
     ctx.closePath();
   }
 
+  // --- 画像書き出し (Canvas) ---
   async function exportImage() {
     if (!screenshot || items.length === 0) return;
     setExporting(true);
-    setError(null);
     try {
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d")!;
@@ -122,180 +145,148 @@ function App() {
       canvas.height = bg.height;
       ctx.drawImage(bg, 0, 0);
 
-      const itemSize = 90;
-      const itemGap = 10;
-      const panelPadding = 14;
-      const labelHeight = 32;
-      const cols = Math.min(items.length, 4);
-      const panelW = cols * (itemSize + itemGap) - itemGap + panelPadding * 2;
-      const panelH = itemSize + labelHeight + panelPadding * 2;
-      const panelX = canvas.width - panelW - 24;
-      const panelY = canvas.height - panelH - 24;
+      const scale = bg.width / 1920;
+      const thumbSize = 400 * scale; 
+      const borderWidth = 10 * scale;
 
-      // パネル背景
-      ctx.fillStyle = "rgba(0,0,0,0.72)";
-      roundRect(ctx, panelX, panelY, panelW, panelH, 14);
-      ctx.fill();
+      for (const pin of pins) {
+        const item = items.find((i) => i.id === pin.itemId);
+        if (!item || !item.thumbnail_url) continue;
 
-      for (let i = 0; i < Math.min(items.length, 4); i++) {
-        const item = items[i];
-        const color = COLORS[i % COLORS.length];
-        const ix = panelX + panelPadding + i * (itemSize + itemGap);
-        const iy = panelY + panelPadding;
+        const color = getColor(item.id);
+        const pinX = pin.x * canvas.width;
+        const pinY = pin.y * canvas.height;
+        const ix = pinX - thumbSize / 2;
+        const iy = pinY - thumbSize / 2;
 
-        // アイテム画像
-        if (item.thumbnail_url) {
-          const img = await loadImage(item.thumbnail_url);
-          ctx.save();
-          roundRect(ctx, ix, iy, itemSize, itemSize, 8);
-          ctx.clip();
-          ctx.drawImage(img, ix, iy, itemSize, itemSize);
-          ctx.restore();
-        }
+        ctx.save();
+        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowBlur = 20 * scale;
+        
+        // 枠
+        ctx.fillStyle = color;
+        roundRect(ctx, ix - borderWidth, iy - borderWidth, thumbSize + borderWidth * 2, thumbSize + borderWidth * 2, 24 * scale);
+        ctx.fill();
 
-        // カラーボーダー
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 3;
-        roundRect(ctx, ix, iy, itemSize, itemSize, 8);
-        ctx.stroke();
-
-        // アイテム名
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 11px sans-serif";
-        ctx.textAlign = "center";
-        const name = item.name.length > 10 ? item.name.slice(0, 10) + "…" : item.name;
-        ctx.fillText(name, ix + itemSize / 2, iy + itemSize + 14);
-
-        // 価格
-        ctx.fillStyle = "#aaaaaa";
-        ctx.font = "10px sans-serif";
-        ctx.fillText(item.price_str, ix + itemSize / 2, iy + itemSize + 28);
-
-        // ピンがある場合は引き出し線を描画
-        const pin = pins.find((p) => p.itemId === item.id);
-        if (pin) {
-          const pinX = pin.x * canvas.width;
-          const pinY = pin.y * canvas.height;
-          const targetX = ix + itemSize / 2;
-          const targetY = iy;
-
-          // 引き出し線
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 2;
-          ctx.setLineDash([8, 4]);
-          ctx.beginPath();
-          ctx.moveTo(pinX, pinY);
-          ctx.lineTo(targetX, targetY);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          // ピン丸
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.arc(pinX, pinY, 8, 0, Math.PI * 2);
-          ctx.fill();
-
-          // ピン中央に番号
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 10px sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText(String(i + 1), pinX, pinY + 4);
-        }
+        // 画像
+        ctx.shadowBlur = 0;
+        const img = await loadImage(item.thumbnail_url);
+        ctx.save();
+        roundRect(ctx, ix, iy, thumbSize, thumbSize, 18 * scale);
+        ctx.clip();
+        ctx.drawImage(img, ix, iy, thumbSize, thumbSize);
+        ctx.restore();
+        ctx.restore();
       }
 
       const base64 = canvas.toDataURL("image/png").replace("data:image/png;base64,", "");
       await invoke("save_image", { base64Data: base64 });
       alert("画像を保存しました！");
     } catch (e) {
-      setError(String(e));
+      setError("エクスポート失敗: " + String(e));
     } finally {
       setExporting(false);
     }
   }
 
   return (
-    <div style={{ padding: "24px", fontFamily: "sans-serif", maxWidth: "900px", margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h1 style={{ fontSize: "20px", margin: 0 }}>コーデまとめ</h1>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button onClick={() => fileInputRef.current?.click()}
-            style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer" }}>
-            スクショを選択
-          </button>
-          <button onClick={exportImage} disabled={exporting || items.length === 0 || !screenshot}
-            style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer", background: (items.length > 0 && screenshot) ? "#4a6cf7" : "#eee", color: (items.length > 0 && screenshot) ? "#fff" : "#aaa" }}>
-            {exporting ? "書き出し中..." : "画像として保存"}
+    <div 
+      style={{ padding: "24px", maxWidth: "1000px", margin: "0 auto", userSelect: draggingPinId !== null ? "none" : "auto" }}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      {/* ヘッダー */}
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+        <h2>VRCコーデまとめ作成</h2>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button onClick={() => fileInputRef.current?.click()}>スクショ選択</button>
+          <button 
+            onClick={exportImage} 
+            disabled={exporting || pins.length === 0}
+            style={{ background: pins.length > 0 ? "#4a6cf7" : "#ccc", color: "#fff" }}
+          >
+            {exporting ? "保存中..." : "画像として保存"}
           </button>
         </div>
-        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={onScreenshotSelect} />
+        <input ref={fileInputRef} type="file" hidden onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const r = new FileReader();
+            r.onload = (ev) => { setScreenshot(ev.target?.result as string); setPins([]); };
+            r.readAsDataURL(file);
+          }
+        }} />
       </div>
 
-      {error && <div style={{ color: "red", marginBottom: "16px", fontSize: "14px" }}>{error}</div>}
-
-      {selectedItemId !== null && (
-        <div style={{ background: "#fffbe6", border: "1px solid #ffe58f", borderRadius: "8px", padding: "10px 14px", marginBottom: "12px", fontSize: "13px", color: "#856404" }}>
-          スクショ上の該当部位をクリックしてください
-        </div>
-      )}
-
+      {/* メイン：スクショ表示エリア */}
       {screenshot && (
-        <div ref={screenshotRef} onClick={onScreenshotClick}
-          style={{ position: "relative", marginBottom: "20px", borderRadius: "12px", overflow: "hidden", cursor: selectedItemId !== null ? "crosshair" : "default" }}>
-          <img src={screenshot} alt="スクショ" style={{ width: "100%", display: "block" }} />
-          {pins.map((pin) => (
-            <div key={pin.itemId} style={{
-              position: "absolute",
-              left: `calc(${pin.x * 100}% - 10px)`,
-              top: `calc(${pin.y * 100}% - 10px)`,
-              width: "20px", height: "20px",
-              background: getColor(pin.itemId),
-              borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: "10px", fontWeight: "bold", color: "#fff",
-              pointerEvents: "none",
-            }}>
-              {items.findIndex((i) => i.id === pin.itemId) + 1}
-            </div>
-          ))}
+        <div 
+          ref={screenshotRef}
+          onClick={onScreenshotClick}
+          style={{ position: "relative", marginBottom: "24px", borderRadius: "8px", overflow: "hidden", cursor: selectedItemId ? "crosshair" : "default" }}
+        >
+          <img src={screenshot} style={{ width: "100%", display: "block" }} draggable={false} />
+          
+          {pins.map((pin) => {
+            const item = items.find(i => i.id === pin.itemId);
+            return (
+              <div
+                key={pin.itemId}
+                onMouseDown={(e) => handlePinMouseDown(e, pin.itemId)}
+                style={{
+                  position: "absolute",
+                  left: `${pin.x * 100}%`,
+                  top: `${pin.y * 100}%`,
+                  transform: "translate(-50%, -50%)",
+                  width: "120px", height: "120px", // プレビュー用の小さめサイズ
+                  border: `3px solid ${getColor(pin.itemId)}`,
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  cursor: "grab",
+                  zIndex: draggingPinId === pin.itemId ? 100 : 10,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.5)"
+                }}
+              >
+                <img src={item?.thumbnail_url || ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} draggable={false} />
+              </div>
+            );
+          })}
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-        <input value={url} onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://booth.pm/ja/items/..."
-          style={{ flex: 1, padding: "8px 12px", fontSize: "14px", borderRadius: "8px", border: "1px solid #ccc" }}
-          onKeyDown={(e) => e.key === "Enter" && fetchItem()} />
-        <button onClick={fetchItem} disabled={loading}
-          style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer" }}>
-          {loading ? "取得中..." : "取得"}
-        </button>
+      {/* アイテム追加フォーム */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <input 
+          value={url} 
+          onChange={(e) => setUrl(e.target.value)} 
+          placeholder="BoothのURLを貼り付け" 
+          style={{ flex: 1, padding: "8px" }}
+        />
+        <button onClick={fetchItem} disabled={loading}>{loading ? "取得中..." : "追加"}</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "12px" }}>
-        {items.map((item, idx) => {
-          const color = COLORS[idx % COLORS.length];
-          const isSelected = selectedItemId === item.id;
-          const hasPin = pins.some((p) => p.itemId === item.id);
-          return (
-            <div key={item.id} onClick={() => setSelectedItemId(isSelected ? null : item.id)}
-              style={{ border: `2px solid ${isSelected ? color : hasPin ? color : "#eee"}`, borderRadius: "12px", overflow: "hidden", cursor: "pointer", opacity: isSelected ? 1 : 0.9, background: isSelected ? "#f0f4ff" : "#fff" }}>
-              {item.thumbnail_url && (
-                <img src={item.thumbnail_url} alt={item.name} style={{ width: "100%", height: "130px", objectFit: "cover" }} />
-              )}
-              <div style={{ padding: "10px 12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                  <div style={{ width: "16px", height: "16px", background: color, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", color: "#fff", fontWeight: "bold", flexShrink: 0 }}>
-                    {idx + 1}
-                  </div>
-                  <div style={{ fontSize: "13px", fontWeight: 500 }}>{item.name}</div>
-                </div>
-                <div style={{ fontSize: "12px", color: "#888" }}>{item.price_str}</div>
-                {hasPin && <div style={{ fontSize: "11px", color: color, marginTop: "4px" }}>ピン設定済み</div>}
-                {isSelected && <div style={{ fontSize: "11px", color: "#856404", marginTop: "4px" }}>スクショをクリック</div>}
-              </div>
-            </div>
-          );
-        })}
+      {/* アイテムリスト */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: "15px" }}>
+        {items.map((item, idx) => (
+          <div 
+            key={item.id}
+            onClick={() => setSelectedItemId(item.id)}
+            style={{ 
+              border: `2px solid ${selectedItemId === item.id ? getColor(item.id) : "#eee"}`,
+              borderRadius: "8px", padding: "8px", position: "relative", cursor: "pointer"
+            }}
+          >
+            <button 
+              onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+              style={{ position: "absolute", top: -5, right: -5, borderRadius: "50%", border: "none", background: "red", color: "#fff", cursor: "pointer" }}
+            >
+              ×
+            </button>
+            <img src={item.thumbnail_url || ""} style={{ width: "100%", height: "100px", objectFit: "cover", borderRadius: "4px" }} />
+            <div style={{ fontSize: "12px", marginTop: "4px", fontWeight: "bold", overflow: "hidden", whiteSpace: "nowrap" }}>{item.name}</div>
+            <div style={{ fontSize: "11px", color: "#666" }}>{idx + 1}: クリックして配置</div>
+          </div>
+        ))}
       </div>
     </div>
   );
