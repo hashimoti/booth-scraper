@@ -31,21 +31,26 @@ async fn fetch_image(url: String) -> Result<String, String> {
     Ok(format!("data:image/png;base64,{}", base64))
 }
 
+// ★修正箇所1: path 引数を追加し、固定パスを廃止
 #[tauri::command]
-async fn save_image(base64_data: String) -> Result<String, String> {
+async fn save_image(base64_data: String, path: String) -> Result<String, String> {
     let bytes = general_purpose::STANDARD
         .decode(&base64_data)
         .map_err(|e| e.to_string())?;
     
-    let path = std::path::PathBuf::from("/mnt/c/Users/hashi/Desktop/outfit.png");
-    fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    // フロントエンドのダイアログで指定された path を使用する
+    let path_buf = std::path::PathBuf::from(&path);
+    fs::write(&path_buf, bytes).map_err(|e| e.to_string())?;
 
-    Ok(path.to_string_lossy().to_string())
+    Ok(path)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // ★修正箇所2: .plugin(...) を追加して機能を有効化する
+        .plugin(tauri_plugin_sql::Builder::default().build()) // SQLite用
+        .plugin(tauri_plugin_dialog::init())                 // 保存ダイアログ用
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,
