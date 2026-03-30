@@ -1,4 +1,3 @@
-//lib.rs
 mod scraper;
 
 use base64::{engine::general_purpose, Engine as _};

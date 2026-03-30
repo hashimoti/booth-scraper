@@ -1,4 +1,6 @@
-
+import { check } from "@tauri-apps/plugin-updater";
+import { ask } from "@tauri-apps/plugin-dialog";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { useRef, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
@@ -25,14 +27,14 @@ interface Pin {
   y: number;
 }
 
-const COLORS = ["#4a6cf7", "#e74c6f", "#1d9e75", "#f39c12", "#9b59b6", "#e67e22"];
+//const COLORS = ["#4a6cf7", "#e74c6f", "#1d9e75", "#f39c12", "#9b59b6", "#e67e22"];
 const DB_PATH = "sqlite:outfit_manager.db";
 
 function App() {
   const [url, setUrl] = useState("");
   const [items, setItems] = useState<BoothItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
@@ -48,6 +50,27 @@ function App() {
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
+    async function checkForUpdates() {
+      try {
+        const update = await check(); // GitHubを見に行って最新版があるか確認
+        if (update) {
+          // アップデートが見つかったらダイアログを出す
+          const yes = await ask(
+            `新しいバージョン (${update.version}) があります！\n今すぐダウンロードして再起動しますか？`, 
+            { title: "アップデートのお知らせ", kind: "info" }
+          );
+          
+          if (yes) {
+            await update.downloadAndInstall(); // ダウンロード＆上書きインストール
+            await relaunch(); // アプリを自動再起動
+          }
+        }
+      } catch (error) {
+        console.error("アップデート確認エラー:", error);
+      }
+    }
+
+    checkForUpdates();
     async function init() {
       try {
         const db = await Database.load(DB_PATH);
