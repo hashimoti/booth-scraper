@@ -1,5 +1,5 @@
 use booth_scraper::BoothScraper;
-
+ 
 #[tokio::main]
 async fn main() {
     // コマンドライン引数からURLを受け取る
