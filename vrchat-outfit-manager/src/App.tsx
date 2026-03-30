@@ -27,7 +27,6 @@ interface Pin {
   y: number;
 }
 
-//const COLORS = ["#4a6cf7", "#e74c6f", "#1d9e75", "#f39c12", "#9b59b6", "#e67e22"];
 const DB_PATH = "sqlite:outfit_manager.db";
 
 function App() {
@@ -52,17 +51,16 @@ function App() {
   useEffect(() => {
     async function checkForUpdates() {
       try {
-        const update = await check(); // GitHubを見に行って最新版があるか確認
+        const update = await check();
         if (update) {
-          // アップデートが見つかったらダイアログを出す
           const yes = await ask(
             `新しいバージョン (${update.version}) があります！\n今すぐダウンロードして再起動しますか？`, 
             { title: "アップデートのお知らせ", kind: "info" }
           );
           
           if (yes) {
-            await update.downloadAndInstall(); // ダウンロード＆上書きインストール
-            await relaunch(); // アプリを自動再起動
+            await update.downloadAndInstall();
+            await relaunch();
           }
         }
       } catch (error) {
@@ -121,6 +119,33 @@ function App() {
       setError("取得エラー: " + String(e));
     } finally {
       setLoading(false);
+    }
+  }
+
+  // ★ 追加：アイテムを削除する機能
+  async function deleteItem(e: React.MouseEvent, id: number) {
+    e.stopPropagation(); // アイテムの「選択（onClick）」が同時に発動するのを防ぐ
+
+    const yes = await ask("本当にこのアイテムを削除しますか？", { title: "削除の確認", kind: "warning" });
+    if (!yes) return;
+
+    try {
+      const db = await Database.load(DB_PATH);
+      // 1. データベースから削除
+      await db.execute("DELETE FROM items WHERE id = $1", [id]);
+      
+      // 2. 画面のリストから削除
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      
+      // 3. 削除したアイテムがピンとして置かれていたら、それも消す
+      setPins((prev) => prev.filter((pin) => pin.itemId !== id));
+      
+      // 4. 削除したアイテムが「選択中」だったら、選択状態を解除する
+      if (selectedItemId === id) setSelectedItemId(null);
+      
+    } catch (e) {
+      console.error("削除エラー:", e);
+      setError("削除エラー: " + String(e));
     }
   }
 
@@ -205,7 +230,6 @@ function App() {
         ctx.restore();
       }
       const base64Full = canvas.toDataURL("image/png");
-      // カンマの位置を探して、それ以降だけを切り出す（JS側でも掃除する）
       const base64Clean = base64Full.split(',')[1]; 
       await invoke("save_image", { base64Data: base64Clean, path: filePath });
       alert("保存しました！");
@@ -283,7 +307,35 @@ function App() {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px" }}>
         {items.map((item) => (
-          <div key={item.id} onClick={() => setSelectedItemId(item.id)} style={{ border: `3px solid ${selectedItemId === item.id ? borderColor : "#eee"}`, borderRadius: "10px", padding: "10px", cursor: "pointer", background: "#fff" }}>
+          // ★ 追加：親divに `position: "relative"` を追加して、バッジ（×ボタン）を配置しやすくしました
+          <div key={item.id} onClick={() => setSelectedItemId(item.id)} style={{ position: "relative", border: `3px solid ${selectedItemId === item.id ? borderColor : "#eee"}`, borderRadius: "10px", padding: "10px", cursor: "pointer", background: "#fff" }}>
+            
+            {/* ★ 追加：削除ボタン */}
+            <button
+              onClick={(e) => deleteItem(e, item.id)}
+              title="このアイテムを削除"
+              style={{
+                position: "absolute",
+                top: "-10px",
+                right: "-10px",
+                width: "24px",
+                height: "24px",
+                background: "#e74c6f",
+                color: "#fff",
+                border: "none",
+                borderRadius: "50%",
+                cursor: "pointer",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+                zIndex: 5
+              }}
+            >
+              ×
+            </button>
+
             <img src={item.thumbnail_url || ""} style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "6px" }} />
             <div style={{ fontSize: "13px", marginTop: "8px", fontWeight: "bold", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
           </div>
