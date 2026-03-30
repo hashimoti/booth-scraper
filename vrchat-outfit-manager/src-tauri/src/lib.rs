@@ -2,7 +2,7 @@ mod scraper;
 
 use base64::{engine::general_purpose, Engine as _};
 use scraper::{BoothItem, BoothScraper};
-use std::fs;
+//use std::fs;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -31,16 +31,25 @@ async fn fetch_image(url: String) -> Result<String, String> {
     Ok(format!("data:image/png;base64,{}", base64))
 }
 
-// ★修正箇所1: path 引数を追加し、固定パスを廃止
+// 引数名を JS 側の invoke に合わせて base64Data に変更
 #[tauri::command]
-async fn save_image(base64_data: String, path: String) -> Result<String, String> {
+#[allow(non_snake_case)]
+async fn save_image(base64Data: String, path: String) -> Result<String, String> {
+    // ★ ここが超重要！「base64Data」ではなく「clean_base64」を decode に渡していますか？
+    let clean_base64 = if let Some(index) = base64Data.find(',') {
+        &base64Data[index + 1..]
+    } else {
+        &base64Data
+    };
+
+    // ❌ decode(&base64Data) だとエラーになります
+    // ✅ decode(clean_base64) になっている必要があります
     let bytes = general_purpose::STANDARD
-        .decode(&base64_data)
+        .decode(clean_base64) // ここを確認！
         .map_err(|e| e.to_string())?;
     
-    // フロントエンドのダイアログで指定された path を使用する
     let path_buf = std::path::PathBuf::from(&path);
-    fs::write(&path_buf, bytes).map_err(|e| e.to_string())?;
+    std::fs::write(&path_buf, bytes).map_err(|e| e.to_string())?;
 
     Ok(path)
 }
@@ -48,9 +57,8 @@ async fn save_image(base64_data: String, path: String) -> Result<String, String>
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        // ★修正箇所2: .plugin(...) を追加して機能を有効化する
-        .plugin(tauri_plugin_sql::Builder::default().build()) // SQLite用
-        .plugin(tauri_plugin_dialog::init())                 // 保存ダイアログ用
+        .plugin(tauri_plugin_sql::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             greet,

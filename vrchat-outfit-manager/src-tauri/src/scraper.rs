@@ -63,17 +63,20 @@ pub fn extract_item_id(url: &str) -> Result<u64, ScraperError> {
 
     // /items/NNNN のパターンを探す
     let marker = "/items/";
-    let pos = url.find(marker).ok_or_else(|| {
-        ScraperError::InvalidUrl(format!("'/items/' が見つかりません: {url}"))
-    })?;
+    let pos = url
+        .find(marker)
+        .ok_or_else(|| ScraperError::InvalidUrl(format!("'/items/' が見つかりません: {url}")))?;
 
     let after = &url[pos + marker.len()..];
     // クエリパラメータやスラッシュの前まで
-    let id_str = after.split(|c| c == '?' || c == '#' || c == '/').next().unwrap_or("");
+    let id_str = after
+        .split(|c| c == '?' || c == '#' || c == '/')
+        .next()
+        .unwrap_or("");
 
-    id_str.parse::<u64>().map_err(|_| {
-        ScraperError::InvalidUrl(format!("商品IDが数値ではありません: '{id_str}'"))
-    })
+    id_str
+        .parse::<u64>()
+        .map_err(|_| ScraperError::InvalidUrl(format!("商品IDが数値ではありません: '{id_str}'")))
 }
 
 /// 商品IDをBooth公式URLに正規化する
@@ -94,9 +97,11 @@ impl BoothScraper {
     pub fn new() -> Result<Self, ScraperError> {
         let client = reqwest::Client::builder()
             // Boothが返す日本語ページを取得するためのヘッダ
-            .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
+            .user_agent(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) \
                          AppleWebKit/537.36 (KHTML, like Gecko) \
-                         Chrome/124.0.0.0 Safari/537.36")
+                         Chrome/124.0.0.0 Safari/537.36",
+            )
             .default_headers({
                 let mut h = reqwest::header::HeaderMap::new();
                 h.insert(
@@ -154,7 +159,11 @@ fn parse_item_page(html: &str, id: u64, booth_url: &str) -> Result<BoothItem, Sc
     // ---------- ショップ情報 ----------
     let shop_name = first_text(
         &doc,
-        &["a.u-tpg-title2[href*='booth.pm']", ".shop-name", "a[class*='shop']"],
+        &[
+            "a.u-tpg-title2[href*='booth.pm']",
+            ".shop-name",
+            "a[class*='shop']",
+        ],
         false,
     )
     .unwrap_or_else(|| "不明なショップ".to_string());
@@ -204,7 +213,11 @@ fn parse_item_page(html: &str, id: u64, booth_url: &str) -> Result<BoothItem, Sc
     // ---------- 説明文 ----------
     let description = first_text(
         &doc,
-        &["meta[name='description']", "meta[property='og:description']", ".description"],
+        &[
+            "meta[name='description']",
+            "meta[property='og:description']",
+            ".description",
+        ],
         true,
     )
     .unwrap_or_default()
@@ -242,7 +255,9 @@ fn parse_item_page(html: &str, id: u64, booth_url: &str) -> Result<BoothItem, Sc
 /// セレクタリストを順番に試し、最初にヒットした要素のテキストを返す
 fn first_text(doc: &Html, selectors: &[&str], is_meta: bool) -> Option<String> {
     for sel_str in selectors {
-        let Ok(sel) = Selector::parse(sel_str) else { continue };
+        let Ok(sel) = Selector::parse(sel_str) else {
+            continue;
+        };
         if let Some(el) = doc.select(&sel).next() {
             let text = if is_meta && el.value().name() == "meta" {
                 el.value().attr("content").unwrap_or("").to_string()
