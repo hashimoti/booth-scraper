@@ -1,88 +1,68 @@
-# booth-scraper
+# 👗 VRC-Outfit-Manager
 
-VRChat改変アイテム管理アプリ用のBoothスクレイパー（Phase 1）。
+VRChat向けのアバター衣装や3Dモデルアセットを、PC上で簡単に整理・管理できるデスクトップアプリケーションです。
 
-## 機能
+## ✨ 主な機能
 
-- Booth URLから商品名・価格・ショップ名・画像URLを取得
-- `https://booth.pm/ja/items/XXXXX` と `https://ショップ名.booth.pm/items/XXXXX` の両形式に対応
-- 取得結果をJSON形式で出力（Phase 2でTauri連携する際にそのまま使用）
+* **アセットの一元管理**: BOOTHなどで購入した衣装やアイテムの情報をすっきり整理し、探しやすくします。
+* **ローカル保存で安全**: データはローカルのSQLiteデータベースに保存されるため、プライバシー面も安心です。アプリを更新してもデータは引き継がれます。
+* **🚀 自動アップデート機能**: 新しいバージョンが公開されると、アプリ起動時に自動で通知・更新が行われます。手動でダウンロードし直す手間はありません！
 
-## 前提条件
+---
 
-```
-rustup（Rust 1.75以降）
-```
+## 📥 インストール方法
 
-## ビルド・実行
+1. [Releasesページ](https://github.com/hashimoti/booth-scraper/releases/latest) にアクセスします。
+2. 最新バージョンの `VRC-Outfit-manager_x.x.x_x64-setup.exe` をダウンロードします。
+3. ダウンロードした `.exe` ファイルをダブルクリックして、画面の指示に従ってインストールしてください。
+
+> **⚠️ 注意: インストール時に青い警告画面が出た場合**
+> 初回起動時、「WindowsによってPCが保護されました（SmartScreen）」という青い画面が表示されることがあります。
+> これは個人開発の新しいソフトでよく見られるWindowsの標準仕様です。画面内の **「詳細情報」** をクリックし、右下に現れる **「実行」** を押すことで安全にインストールを続行できます。
+
+---
+
+## 📖 使い方
+
+インストールが完了し、アプリを起動したら以下の手順でアセットを管理してみましょう！
+
+### 1. アセットの登録
+購入した衣装やアイテムの情報をアプリに追加します。
+* 画面内の **[追加ボタン / Add]** をクリックします。
+* アイテムの名前、対応アバター、画像、購入元のURL（BOOTHなど）を入力・設定して保存します。
+* *(※もしBOOTHのURLから自動取得する機能があれば、ここに「BOOTHのURLをコピペするだけで画像などを自動取得できます」と記載)*
+
+### 2. アセットの検索・整理
+登録したアイテムが増えてきても、簡単に探し出すことができます。
+* **検索バー**: アイテム名やアバター名で絞り込みができます。
+* **タグ・カテゴリ機能**: 「夏服」「アクセサリ」「〇〇ちゃん専用」など、お好みの分類で整理しておくと便利です。
+
+### 3. データの保存について
+* 登録したデータは、あなたのPC内（ローカル環境）に自動で安全に保存されます。手動でセーブボタンを押す必要はありません。
+* アプリのバージョンアップを行っても、登録したアイテムや設定はそのまま引き継がれます。
+
+---
+
+## 🛠️ 開発者向けセットアップ
+
+このプロジェクトは **Tauri v2** を使用して開発されています。ご自身でビルドや改造を行いたい場合は以下の手順を参考にしてください。
+
+### 必須環境
+* Node.js
+* Rust (Cargo)
+
+### ローカルでの起動・ビルド手順
 
 ```bash
-# ビルド
-cargo build --release
+# リポジトリのクローン
+git clone [https://github.com/hashimoti/booth-scraper.git](https://github.com/hashimoti/booth-scraper.git)
+cd vrchat-outfit-manager
 
-# 実行（URLを指定）
-cargo run -- https://booth.pm/ja/items/1234567
+# 依存パッケージのインストール
+npm install
 
-# テスト実行
-cargo test
-```
+# 開発モードで起動
+npm run dev
 
-## 取得できるデータ
-
-```json
-{
-  "id": 1234567,
-  "name": "商品名",
-  "price": 2200,
-  "price_str": "¥2,200",
-  "shop_name": "ショップ名",
-  "shop_url": "https://myshop.booth.pm",
-  "thumbnail_url": "https://booth.pximg.net/...",
-  "image_urls": ["https://booth.pximg.net/..."],
-  "description": "商品説明文（先頭200文字）",
-  "booth_url": "https://booth.pm/ja/items/1234567",
-  "tags": ["VRChat", "衣装"]
-}
-```
-
-## Tauriへの組み込み方（Phase 2）
-
-このクレートをTauriプロジェクトの `src-tauri/` 配下に配置し、
-`Cargo.toml` のworkspaceメンバーとして追加してください。
-
-Tauriコマンドとして公開する例：
-
-```rust
-// src-tauri/src/main.rs
-use booth_scraper::{BoothScraper, BoothItem, ScraperError};
-
-#[tauri::command]
-async fn fetch_booth_item(url: String) -> Result<BoothItem, String> {
-    let scraper = BoothScraper::new().map_err(|e| e.to_string())?;
-    scraper.fetch(&url).await.map_err(|e| e.to_string())
-}
-
-fn main() {
-    tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![fetch_booth_item])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-React側からの呼び出し例：
-
-```typescript
-import { invoke } from "@tauri-apps/api/core";
-import type { BoothItem } from "./types";
-
-const item = await invoke<BoothItem>("fetch_booth_item", {
-  url: "https://booth.pm/ja/items/1234567",
-});
-```
-
-## 注意事項
-
-- Boothの利用規約の範囲内で使用してください
-- 大量リクエストはサーバー負荷になるため、取得結果はSQLiteにキャッシュする（Phase 2で実装）
-- BoothのHTML構造が変更された場合はセレクタの更新が必要になる場合があります
+# プロダクションビルド（.exeの生成）
+npm run tauri build
