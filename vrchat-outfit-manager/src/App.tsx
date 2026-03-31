@@ -5,6 +5,7 @@ import { useRef, useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Database from "@tauri-apps/plugin-sql";
 import { save } from "@tauri-apps/plugin-dialog";
+import * as opener from "@tauri-apps/plugin-opener";
 
 // --- 型定義 ---
 interface BoothItem {
@@ -48,6 +49,8 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  // 右クリックでBoothのリンクに飛べる機能
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, itemId: number } | null>(null);
   useEffect(() => {
     async function checkForUpdates() {
       try {
@@ -308,7 +311,13 @@ function App() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px" }}>
         {items.map((item) => (
           // ★ 追加：親divに `position: "relative"` を追加して、バッジ（×ボタン）を配置しやすくしました
-          <div key={item.id} onClick={() => setSelectedItemId(item.id)} style={{ position: "relative", border: `3px solid ${selectedItemId === item.id ? borderColor : "#eee"}`, borderRadius: "10px", padding: "10px", cursor: "pointer", background: "#fff" }}>
+          <div key={item.id} 
+          onClick={() => setSelectedItemId(item.id)} 
+          onContextMenu={(e) => {
+            e.preventDefault(); // ブラウザ標準のメニューを出さない
+            setContextMenu({ x: e.clientX, y: e.clientY, itemId: item.id });
+          }}
+          style={{ position: "relative", border: `3px solid ${selectedItemId === item.id ? borderColor : "#eee"}`, borderRadius: "10px", padding: "10px", cursor: "pointer", background: "#fff" }}>
             
             {/* ★ 追加：削除ボタン */}
             <button
@@ -341,7 +350,31 @@ function App() {
           </div>
         ))}
       </div>
+      {/* ★ 追加：右クリックメニュー本体 */}
+      {contextMenu && (
+        <div 
+          style={{ 
+            position: "fixed", top: contextMenu.y, left: contextMenu.x, 
+            background: "white", border: "1px solid #ccc", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", 
+            zIndex: 1000, borderRadius: "4px", padding: "4px 0" 
+          }}
+          onClick={() => setContextMenu(null)} // メニューを選択したら閉じる
+        >
+          <div 
+            onClick={() => {
+              const item = items.find(i => i.id === contextMenu.itemId);
+              if (item) opener.openUrl(item.booth_url);
+            }}
+            style={{ padding: "8px 16px", cursor: "pointer", fontSize: "14px" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f0f0")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            BOOTHでページを開く 🔗
+          </div>
+        </div>
+      )}
     </div>
+    
   );
 }
 
