@@ -1,0 +1,11 @@
+{
+  "version": "v0.2.0",
+  "notes": "自動アップデート機能を追加しました",
+  "pub_date": "2026-03-31T20:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNWpqMlRLbHQ0ODQzRm40ZTBWZ1BNblJ4bldpVi8xTGtOd3p2TmxIa21wMFJZY1cyeGc0a1hub2U5Rnp1aFVsclBQRTVPK2szRkxoRnk3eWNxaThLb3A5L25Vcld2c3dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0OTU0MzQ4CWZpbGU6VlJDLU91dGZpdC1tYW5hZ2VyXzAuMi4wX3g2NC1zZXR1cC5leGUKTy9ZODE2VUdxYmhiWFdYeHBwZndWTXdsTGVZd3FraU1rY2dzeVYzWmFscEZmeTF0TnpFUmlPK1U0YjROdHM4Tk01QTJhSmhQUzhHZENvemM2YnJ0REE9PQo=",
+      "url": "https://github.com/hashimoti/booth-scraper/releases/download/v0.2.0/VRC-Outfit-manager_0.2.0_x64-setup.exe"
+    }
+  }
+}
