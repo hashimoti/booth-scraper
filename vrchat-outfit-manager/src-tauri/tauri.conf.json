@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "VRC-Outfit-manager",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "identifier": "com.vrchat.outfitmanager",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -18,12 +18,13 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; img-src 'self' asset: https://*.booth.pm https://*.pixiv.net data:;"
     }
   },
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,7 +39,7 @@
       "endpoints": [
         "https://github.com/hashimoti/booth-scraper/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZDODkyQzEwRjQzODI5N0EKUldSNktUajBFQ3lKYkxWYnRWNkxFT2QyU1dveHFhM1hyQ21Od2E0MTFWTm9iQlFkdXFTN2gzVUgK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENFRjA4Qzg4Nzk3RDg3MDkKUldRSmgzMTVpSXp3em1COU1SV2l5WlMvK0NqNWU0SzZDNEpFajJwY0ZVdmY3YmYzQTF4Q3VaSW0K"
     }
   }
 }
