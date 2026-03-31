@@ -152,6 +152,12 @@ function App() {
     }
   }
 
+  const removePin = (e: React.MouseEvent, itemId: number) => {
+    e.preventDefault(); // 右クリックメニューを防ぐ
+    e.stopPropagation(); // 親のクリックイベントを防ぐ
+    setPins((prev) => prev.filter((p) => p.itemId !== itemId));
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingPinId === null || !imgRef.current) return;
     const rect = imgRef.current.getBoundingClientRect();
@@ -282,14 +288,27 @@ function App() {
         </div>
       </div>
 
+      {/* プレビュー表示 */}
       {screenshot && (
-        <div onClick={onScreenshotClick} style={{ position: "relative", marginBottom: "30px", borderRadius: "12px", overflow: "hidden", height: "70vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#000", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+        <div 
+          onClick={onScreenshotClick} 
+          onContextMenu={(e) => {
+            if (selectedItemId !== null) {
+              e.preventDefault();
+              setSelectedItemId(null);
+            }
+          }}
+          style={{ position: "relative", marginBottom: "30px", borderRadius: "12px", overflow: "hidden", height: "70vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#000", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}
+        >
           <div style={{ position: "relative", display: "inline-block" }}>
             <img ref={imgRef} src={screenshot} style={{ maxWidth: "100%", maxHeight: "70vh" }} draggable={false} />
             {pins.map((pin) => {
               const item = items.find(i => i.id === pin.itemId);
               return (
-                <div key={pin.itemId} onMouseDown={(e) => { e.stopPropagation(); setDraggingPinId(pin.itemId); }}
+                <div key={pin.itemId} 
+                  onMouseDown={(e) => { e.stopPropagation(); setDraggingPinId(pin.itemId); }}
+                  // ★ 配置済みピンを右クリックで削除
+                  onContextMenu={(e) => removePin(e, pin.itemId)}
                   style={{
                     position: "absolute", left: `${pin.x * 100}%`, top: `${pin.y * 100}%`, transform: "translate(-50%, -50%)",
                     width: thumbSize, height: thumbSize, border: `${borderWidth}px solid ${borderColor}`,
@@ -300,14 +319,21 @@ function App() {
               );
             })}
           </div>
+          {selectedItemId && (
+            <div style={{ position: "absolute", bottom: "10px", background: "rgba(0,0,0,0.7)", color: "white", padding: "5px 15px", borderRadius: "20px", fontSize: "12px", pointerEvents: "none" }}>
+              アイテム配置中...（右クリックまたはEscでキャンセル）
+            </div>
+          )}
         </div>
       )}
 
+      {/* URL入力 */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "30px" }}>
         <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="BoothのURLを貼り付け" style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid #ddd" }} onKeyDown={(e) => e.key === "Enter" && fetchItem()} />
         <button onClick={fetchItem} disabled={loading} style={{ padding: "10px 20px", background: "#4a6cf7", color: "#fff", border: "none", borderRadius: "4px" }}>追加</button>
       </div>
 
+      {/* アイテム一覧 */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px" }}>
         {items.map((item) => (
           // ★ 追加：親divに `position: "relative"` を追加して、バッジ（×ボタン）を配置しやすくしました
@@ -371,10 +397,43 @@ function App() {
           >
             BOOTHでページを開く 🔗
           </div>
+          
+        </div>
+        
+      )}
+      {/* --- 追加：投稿用URLリスト (コピー用) --- */}
+      {pins.length > 0 && (
+        <div style={{ 
+          marginTop: "40px", padding: "20px", background: "#f8f9fa", borderRadius: "12px", border: "2px dashed #dee2e6" 
+        }}>
+          <h2 style={{ fontSize: "15px", marginBottom: "10px", color: "#495057", fontWeight: "bold" }}>
+            📢 投稿用クレジット (アイテム名 & URL)
+          </h2>
+          <textarea
+            readOnly
+            value={(() => {
+              const usedItemIds = pins.map(pin => pin.itemId);
+              // 重複を排除しつつ、配置されているアイテムを抽出
+              const uniqueItems = items.filter(item => usedItemIds.includes(item.id));
+              
+              // ★ 修正：【アイテム名】\n URL の形式で並べる
+              return uniqueItems
+                .map(item => `【${item.name}】\n${item.booth_url}`)
+                .join("\n\n");
+            })()}
+            style={{
+              width: "100%", height: "140px", padding: "12px", borderRadius: "8px", border: "1px solid #ced4da",
+              fontFamily: "monospace", fontSize: "13px", lineHeight: "1.6", backgroundColor: "#fff",
+              color: "#333", resize: "none", cursor: "pointer"
+            }}
+            onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+          />
+          <p style={{ fontSize: "11px", color: "#868e96", marginTop: "8px" }}>
+            💡 クリックすると全選択されます。そのままコピーしてSNSのツリー投稿等にお使いください。
+          </p>
         </div>
       )}
     </div>
-    
   );
 }
 

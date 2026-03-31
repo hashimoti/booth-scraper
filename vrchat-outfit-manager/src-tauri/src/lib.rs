@@ -65,8 +65,15 @@ pub fn run() {
             greet,
             fetch_booth_item,
             fetch_image,
-            save_image
+            save_image,
+            save_text 
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+#[tauri::command]
+async fn save_text(content: String, path: String) -> Result<(), String> {
+    // 文字列(content)を指定されたパス(path)に書き込むだけ
+    std::fs::write(path, content).map_err(|e| e.to_string())?;
+    Ok(())
 }
