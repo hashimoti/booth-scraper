@@ -52,23 +52,30 @@ function App() {
     let disposed = false;
 
     async function checkForUpdates() {
-      try {
-        const update = await check();
-        if (!update) return;
-
-        const yes = await ask(`新しいバージョン (${update.version}) があります。今すぐ更新しますか？`, {
-          title: "アップデート確認",
-          kind: "info",
-        });
-
-        if (yes) {
-          await update.downloadAndInstall();
-          await relaunch();
-        }
-      } catch (error) {
-        console.error("アップデート確認エラー:", error);
+    try {
+      const update = await check();
+      // 診断1: そもそもチェックに行けているか
+      if (!update) {
+        // alert("アップデートは見つかりませんでした（現在のバージョンは最新です）");
+        return;
       }
+
+      const yes = await ask(`新Ver (${update.version}) があります。更新しますか？`, {
+        title: "アップデート確認",
+        kind: "info",
+      });
+
+      if (yes) {
+        alert("ダウンロードを開始します...");
+        await update.downloadAndInstall();
+        alert("インストール完了！再起動します。");
+        await relaunch();
+      }
+    } catch (error) {
+      // 診断2: エラーが出た場合、その内容を画面に出す
+      await ask(`エラーが発生しました: ${String(error)}`, { title: "デバッグ情報", kind: "error" });
     }
+  }
 
     async function init() {
       try {
