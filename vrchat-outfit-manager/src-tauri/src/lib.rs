@@ -1,8 +1,7 @@
-mod scraper;
+﻿mod scraper;
 
 use base64::{engine::general_purpose, Engine as _};
 use scraper::{BoothItem, BoothScraper};
-//use std::fs;
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -31,23 +30,26 @@ async fn fetch_image(url: String) -> Result<String, String> {
     Ok(format!("data:image/png;base64,{}", base64))
 }
 
-// 引数名を JS 側の invoke に合わせて base64Data に変更
 #[tauri::command]
-#[allow(non_snake_case)]
-async fn save_image(base64Data: String, path: String) -> Result<String, String> {
-    // ★ ここが超重要！「base64Data」ではなく「clean_base64」を decode に渡していますか？
-    let clean_base64 = if let Some(index) = base64Data.find(',') {
-        &base64Data[index + 1..]
+async fn save_image(base64_data: String, path: String) -> Result<String, String> {
+    let clean_base64 = if let Some(index) = base64_data.find(',') {
+        &base64_data[index + 1..]
     } else {
-        &base64Data
+        &base64_data
     };
 
-    // ❌ decode(&base64Data) だとエラーになります
-    // ✅ decode(clean_base64) になっている必要があります
     let bytes = general_purpose::STANDARD
-        .decode(clean_base64) // ここを確認！
+        .decode(clean_base64)
         .map_err(|e| e.to_string())?;
-    
+
+    let path_buf = std::path::PathBuf::from(&path);
+    std::fs::write(&path_buf, bytes).map_err(|e| e.to_string())?;
+
+    Ok(path)
+}
+
+#[tauri::command]
+async fn save_image_bytes(bytes: Vec<u8>, path: String) -> Result<String, String> {
     let path_buf = std::path::PathBuf::from(&path);
     std::fs::write(&path_buf, bytes).map_err(|e| e.to_string())?;
 
@@ -57,7 +59,7 @@ async fn save_image(base64Data: String, path: String) -> Result<String, String> 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build()) // ★追加
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -66,14 +68,15 @@ pub fn run() {
             fetch_booth_item,
             fetch_image,
             save_image,
-            save_text 
+            save_image_bytes,
+            save_text
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
 #[tauri::command]
 async fn save_text(content: String, path: String) -> Result<(), String> {
-    // 文字列(content)を指定されたパス(path)に書き込むだけ
     std::fs::write(path, content).map_err(|e| e.to_string())?;
     Ok(())
 }
