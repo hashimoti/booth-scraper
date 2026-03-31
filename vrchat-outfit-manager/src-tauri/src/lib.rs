@@ -17,17 +17,28 @@ async fn fetch_booth_item(url: String) -> Result<BoothItem, String> {
 #[tauri::command]
 async fn fetch_image(url: String) -> Result<String, String> {
     let client = reqwest::Client::new();
-    let bytes = client
+    let response = client
         .get(&url)
         .send()
         .await
         .map_err(|e| e.to_string())?
+        .error_for_status()
+        .map_err(|e| e.to_string())?;
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.split(';').next().unwrap_or("image/png"))
+        .filter(|value| value.starts_with("image/"))
+        .unwrap_or("image/png")
+        .to_string();
+    let bytes = response
         .bytes()
         .await
         .map_err(|e| e.to_string())?;
 
     let base64 = general_purpose::STANDARD.encode(&bytes);
-    Ok(format!("data:image/png;base64,{}", base64))
+    Ok(format!("data:{};base64,{}", content_type, base64))
 }
 
 #[tauri::command]

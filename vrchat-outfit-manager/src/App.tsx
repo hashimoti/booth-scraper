@@ -211,11 +211,21 @@ function App() {
   function loadImage(src: string): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const image = new Image();
-      image.crossOrigin = "anonymous";
       image.onload = () => resolve(image);
       image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
       image.src = src;
     });
+  }
+
+  async function getExportSafeImageSrc(src: string, cache: Map<string, string>): Promise<string> {
+    const cached = cache.get(src);
+    if (cached) {
+      return cached;
+    }
+
+    const safeSrc = await invoke<string>("fetch_image", { url: src });
+    cache.set(src, safeSrc);
+    return safeSrc;
   }
 
   function canvasToBlob(canvas: HTMLCanvasElement, type: string): Promise<Blob> {
@@ -254,6 +264,7 @@ function App() {
       const exportThumbSize = thumbSize * scale;
       const exportBorderWidth = borderWidth * scale;
       const borderRadius = exportThumbSize * 0.15;
+      const exportImageCache = new Map<string, string>();
 
       for (const pin of pins) {
         const item = items.find((entry) => entry.id === pin.itemId);
@@ -281,7 +292,8 @@ function App() {
           ctx.fill();
         }
 
-        const thumbnail = await loadImage(item.thumbnail_url);
+        const safeThumbnailSrc = await getExportSafeImageSrc(item.thumbnail_url, exportImageCache);
+        const thumbnail = await loadImage(safeThumbnailSrc);
         ctx.save();
         ctx.beginPath();
         // @ts-ignore roundRect is available in modern webviews.
