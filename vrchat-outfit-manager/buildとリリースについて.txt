@@ -1,0 +1,3 @@
+./release.ps1 -Version "v0.2.5" -ReleaseNotes "UIの変更"
+これでBuildとpackage.jsonとtauri.conf.jsonの変更が可能。
+gitに上げるためのlatest.jsonも変更済みになる。あとはGitに挙げるだけ
