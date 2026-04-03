@@ -1,11 +1,11 @@
 {
-  "version": "0.2.1",
-  "notes": "いろいろ軽量化しました。たぶん作った自分ですら分からんレベルだから気にしないで",
-  "pub_date": "2026-04-01T12:00:00Z",
+  "version": "v0.2.5",
+  "notes": "UIの変更",
+  "pub_date": "2026-04-03T08:24:19Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNWpqMlRLbHQ0ODdDdHMxamFnb2NZVyt2TWw5NWQzdXkyRjJMMjh3RmdsT3Rybm8xY2dLMmV0Wjl3UGJFNmtZUVV1S3hsRm1EQ3FuMC9SWW1OeUZpR2k2NFdvdmNnaUFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc0OTgzNTI1CWZpbGU6VlJDLU91dGZpdC1tYW5hZ2VyXzAuMi4xX3g2NC1zZXR1cC5leGUKUmJNNnQ0aFQvSnNkV0VVbFZjeVJsRytsSXZhWUFOVFdJVHcvYmI0aitzcHlBOFZoT3Bkcks0MThwYUViWEpwVHQ5ZndEYmgzaUk3SDMwbWZibnhXREE9PQo=",
-      "url": "https://github.com/hashimoti/booth-scraper/releases/download/v0.2.1/VRC-Outfit-manager_0.2.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTNWpqMlRLbHQ0ODZVZHVOUFdYY0FVVzd5b2RISGhCVGFLbGprdjJ5bGdFYzl6MjR1OWl5R3BnYWd0K0dkRkZHTmVVeUVkRlcvTVlOUzVQQklvbGVYM3ZVU0YvSVIzVFE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzc1MjA0NjU5CWZpbGU6VlJDLU91dGZpdC1tYW5hZ2VyXzAuMi41X3g2NC1zZXR1cC5leGUKU3Bnb3FrckFKZExQU2F4ek56SlNjdmIzYVdzUlFqU1lDdUF3cWxHK1ZmTVpjUEpWMmJKNTM4MGhNdXJ4cEJCMGFaK2FpU3J4WU4xVzFpWTJoMC83QWc9PQo=",
+      "url": "https://github.com/hashimoti/booth-scraper/releases/download/v0.2.5/VRC-Outfit-manager_0.2.5_x64-setup.exe"
     }
   }
 }

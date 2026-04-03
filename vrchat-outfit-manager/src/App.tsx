@@ -28,6 +28,12 @@ interface Pin {
 }
 
 const DB_PATH = "sqlite:outfit_manager.db";
+const accentColor = "#f28c6f";
+const accentSoft = "#fff1eb";
+const panelColor = "#fffaf7";
+const panelBorder = "#f3d8cf";
+const pageBackground = "linear-gradient(180deg, #fff8f3 0%, #fffdfa 45%, #fef7f2 100%)";
+const cardShadow = "0 12px 28px rgba(227, 157, 129, 0.14)";
 
 function App() {
   const [url, setUrl] = useState("");
@@ -355,28 +361,47 @@ function App() {
 
   return (
     <div
-      style={{ padding: "24px", maxWidth: "1200px", margin: "0 auto", fontFamily: "sans-serif" }}
+      style={{
+        padding: "24px",
+        maxWidth: "1200px",
+        margin: "0 auto",
+        fontFamily: '"Trebuchet MS", "Hiragino Kaku Gothic ProN", sans-serif',
+        minHeight: "100vh",
+        background: pageBackground,
+        color: "#5c4b46",
+      }}
       onMouseMove={handleMouseMove}
       onMouseUp={() => setDraggingPinId(null)}
       onClick={() => contextMenu && setContextMenu(null)}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-        <h1 style={{ fontSize: "20px", fontWeight: "bold" }}>VRC Outfit Manager</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+        <h1 style={{ fontSize: "24px", fontWeight: "bold", margin: 0, color: "#7a5147", letterSpacing: "0.02em" }}>VRC Outfit Manager</h1>
         <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={() => fileInputRef.current?.click()} style={{ padding: "8px 16px", cursor: "pointer" }}>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              padding: "10px 18px",
+              cursor: "pointer",
+              borderRadius: "999px",
+              border: `1px solid ${panelBorder}`,
+              background: "#fff",
+              boxShadow: "0 8px 18px rgba(214, 181, 168, 0.18)",
+            }}
+          >
             スクリーンショット選択
           </button>
           <button
             onClick={exportImage}
             disabled={exporting || pins.length === 0}
             style={{
-              padding: "8px 24px",
-              background: "#4a6cf7",
+              padding: "10px 24px",
+              background: accentColor,
               color: "#fff",
               border: "none",
-              borderRadius: "4px",
+              borderRadius: "999px",
               cursor: "pointer",
               fontWeight: "bold",
+              boxShadow: "0 12px 24px rgba(242, 140, 111, 0.28)",
             }}
           >
             {exporting ? "書き出し中..." : "画像として保存"}
@@ -388,28 +413,29 @@ function App() {
       <div
         style={{
           marginBottom: "20px",
-          background: "#f8f9fa",
-          padding: "15px",
-          borderRadius: "8px",
-          border: "1px solid #eee",
+          background: panelColor,
+          padding: "18px",
+          borderRadius: "24px",
+          border: `1px solid ${panelBorder}`,
           display: "flex",
           flexDirection: "column",
           gap: "10px",
+          boxShadow: cardShadow,
         }}
       >
         {/* プレビュー表示 */}
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "bold", width: "120px" }}>アイテムサイズ:</label>
+          <label style={{ fontSize: "14px", fontWeight: "bold", width: "120px", color: "#7a5147" }}>アイテムサイズ:</label>
           <input type="range" min="40" max="300" value={thumbSize} onChange={(event) => setThumbSize(Number(event.target.value))} style={{ flex: 1 }} />
           <span style={{ minWidth: "50px" }}>{thumbSize}px</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "bold", width: "120px" }}>枠の太さ:</label>
+          <label style={{ fontSize: "14px", fontWeight: "bold", width: "120px", color: "#7a5147" }}>枠の太さ:</label>
           <input type="range" min="0" max="20" value={borderWidth} onChange={(event) => setBorderWidth(Number(event.target.value))} style={{ flex: 1 }} />
           <span style={{ minWidth: "50px" }}>{borderWidth}px</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <label style={{ fontSize: "14px", fontWeight: "bold", width: "120px" }}>枠の色:</label>
+          <label style={{ fontSize: "14px", fontWeight: "bold", width: "120px", color: "#7a5147" }}>枠の色:</label>
           <input
             type="color"
             value={borderColor}
@@ -432,14 +458,15 @@ function App() {
           style={{
             position: "relative",
             marginBottom: "30px",
-            borderRadius: "12px",
+            borderRadius: "28px",
             overflow: "hidden",
             height: "70vh",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "#000",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+            background: "#2f2522",
+            boxShadow: "0 22px 44px rgba(73, 49, 42, 0.28)",
+            border: "1px solid rgba(255,255,255,0.35)",
           }}
         >
           <div style={{ position: "relative", display: "inline-block" }}>
@@ -463,11 +490,11 @@ function App() {
                     width: thumbSize,
                     height: thumbSize,
                     border: `${borderWidth}px solid ${borderColor}`,
-                    borderRadius: "12px",
+                    borderRadius: "22px",
                     overflow: "hidden",
                     cursor: "grab",
                     zIndex: 10,
-                    boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
+                    boxShadow: "0 10px 24px rgba(0,0,0,0.26)",
                   }}
                 >
                   <img src={item?.thumbnail_url || ""} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
@@ -479,11 +506,13 @@ function App() {
             <div
               style={{
                 position: "absolute",
-                bottom: "10px",
-                background: "rgba(0,0,0,0.7)",
-                color: "white",
-                padding: "5px 15px",
-                borderRadius: "20px",
+                bottom: "14px",
+                background: "rgba(255, 248, 243, 0.92)",
+                color: "#7a5147",
+                border: "1px solid rgba(255,255,255,0.8)",
+                boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+                padding: "8px 16px",
+                borderRadius: "999px",
                 fontSize: "12px",
                 pointerEvents: "none",
               }}
@@ -500,13 +529,27 @@ function App() {
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder="BoothのURLを貼り付け"
-          style={{ flex: 1, padding: "10px", borderRadius: "4px", border: "1px solid #ddd" }}
+          style={{
+            flex: 1,
+            padding: "12px 16px",
+            borderRadius: "999px",
+            border: `1px solid ${panelBorder}`,
+            background: "#fffdfb",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85)",
+          }}
           onKeyDown={(event) => event.key === "Enter" && void fetchItem()}
         />
         <button
           onClick={() => void fetchItem()}
           disabled={loading}
-          style={{ padding: "10px 20px", background: "#4a6cf7", color: "#fff", border: "none", borderRadius: "4px" }}
+          style={{
+            padding: "10px 22px",
+            background: accentColor,
+            color: "#fff",
+            border: "none",
+            borderRadius: "999px",
+            boxShadow: "0 12px 24px rgba(242, 140, 111, 0.28)",
+          }}
         >
           追加
         </button>
@@ -525,11 +568,13 @@ function App() {
             }}
             style={{
               position: "relative",
-              border: `3px solid ${selectedItemId === item.id ? borderColor : "#eee"}`,
-              borderRadius: "10px",
-              padding: "10px",
+              border: `2px solid ${selectedItemId === item.id ? borderColor : panelBorder}`,
+              borderRadius: "24px",
+              padding: "12px",
               cursor: "pointer",
-              background: "#fff",
+              background: "#fffdfb",
+              boxShadow: selectedItemId === item.id ? "0 18px 32px rgba(242, 140, 111, 0.18)" : cardShadow,
+              transition: "all 0.2s ease",
             }}
           >
             <button
@@ -539,8 +584,8 @@ function App() {
                 position: "absolute",
                 top: "-10px",
                 right: "-10px",
-                width: "24px",
-                height: "24px",
+                width: "28px",
+                height: "28px",
                 background: "#e74c6f",
                 color: "#fff",
                 border: "none",
@@ -550,14 +595,14 @@ function App() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+                boxShadow: "0 8px 16px rgba(231, 76, 111, 0.28)",
                 zIndex: 5,
               }}
             >
               ×
             </button>
 
-            <img src={item.thumbnail_url || ""} style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "6px" }} />
+            <img src={item.thumbnail_url || ""} style={{ width: "100%", height: "120px", objectFit: "cover", borderRadius: "18px" }} />
             <div
               style={{
                 fontSize: "13px",
@@ -581,12 +626,12 @@ function App() {
             position: "fixed",
             top: contextMenu.y,
             left: contextMenu.x,
-            background: "white",
-            border: "1px solid #ccc",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            background: "#fffaf7",
+            border: `1px solid ${panelBorder}`,
+            boxShadow: "0 16px 30px rgba(92, 75, 70, 0.18)",
             zIndex: 1000,
-            borderRadius: "4px",
-            padding: "4px 0",
+            borderRadius: "18px",
+            padding: "6px 0",
           }}
         >
           {/* コンテキストメニュー本体 */}
@@ -598,9 +643,9 @@ function App() {
                 void opener.openUrl(item.booth_url);
               }
             }}
-            style={{ padding: "8px 16px", cursor: "pointer", fontSize: "14px" }}
+            style={{ padding: "10px 16px", cursor: "pointer", fontSize: "14px", color: "#6b4f48" }}
             onMouseEnter={(event) => {
-              event.currentTarget.style.background = "#f0f0f0";
+              event.currentTarget.style.background = accentSoft;
             }}
             onMouseLeave={(event) => {
               event.currentTarget.style.background = "transparent";
@@ -616,13 +661,14 @@ function App() {
           style={{
             marginTop: "40px",
             padding: "20px",
-            background: "#f8f9fa",
-            borderRadius: "12px",
-            border: "2px dashed #dee2e6",
+            background: panelColor,
+            borderRadius: "24px",
+            border: `2px dashed ${panelBorder}`,
+            boxShadow: cardShadow,
           }}
         >
           {/* 投稿用URLリスト */}
-          <h2 style={{ fontSize: "15px", marginBottom: "10px", color: "#495057", fontWeight: "bold" }}>
+          <h2 style={{ fontSize: "15px", marginBottom: "10px", color: "#7a5147", fontWeight: "bold" }}>
             投稿用クレジット
           </h2>
           <textarea
@@ -632,19 +678,19 @@ function App() {
               width: "100%",
               height: "140px",
               padding: "12px",
-              borderRadius: "8px",
-              border: "1px solid #ced4da",
+              borderRadius: "18px",
+              border: `1px solid ${panelBorder}`,
               fontFamily: "monospace",
               fontSize: "13px",
               lineHeight: "1.6",
-              backgroundColor: "#fff",
-              color: "#333",
+              backgroundColor: "#fffdfb",
+              color: "#5c4b46",
               resize: "none",
               cursor: "pointer",
             }}
             onClick={(event) => event.currentTarget.select()}
           />
-          <p style={{ fontSize: "11px", color: "#868e96", marginTop: "8px" }}>
+          <p style={{ fontSize: "11px", color: "#9c7b70", marginTop: "8px" }}>
             使っているアイテムだけを一覧化しています。投稿文やメモにそのまま使えます。
           </p>
         </div>
